@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* =========================
+   DESIGN TOKENS (THEME)
+   ========================= */
+@theme {
+  /* =====================
+     GLOBAL BASE
+     ===================== */
+  --color-background: #faf7f2;        /* Page background (body, main layout) */
+  --color-foreground: #1a1a1a;        /* Default text color */
+
+  /* =====================
+     SURFACES & CONTAINERS
+     ===================== */
+  --color-card: #ffffff;              /* Cards, product tiles, dropdowns */
+  --color-surface: #f3efe8;           /* Sections, alternate backgrounds */
+
+  /* =====================
+     BRAND / PRIMARY
+     ===================== */
+  --color-primary: #c46a1b;            /* Primary buttons, links, highlights */
+  --color-primary-foreground: #ffffff;/* Text/icons on primary buttons */
+
+  /* =====================
+     SECONDARY (DARK UI)
+     ===================== */
+  --color-secondary: #111111;          /* Navbar, footer, dark sections */
+  --color-secondary-foreground: #ffffff; /* Text/icons on dark backgrounds */
+
+  /* =====================
+     MUTED / SUPPORTING
+     ===================== */
+  --color-muted: #e8e2d9;              /* Input backgrounds, subtle UI */
+  --color-muted-foreground: #6b6b6b;   /* Descriptions, helper text */
+
+  /* =====================
+     BORDERS & DIVIDERS
+     ===================== */
+  --color-border: #ded6ca;             /* Card borders, separators */
+
+  /* =====================
+     ACCENT / STATUS
+     ===================== */
+  --color-highlight: #f59e0b;           /* Badges, discounts, offers */
+
+  /* =====================
+     SHAPE SYSTEM
+     ===================== */
+  --radius: 1rem;                      /* Buttons, cards, inputs */
+
+  /* Card TransitionY */
+  --lift-distance: -6px;              /* How much cards lift on hover */
+  --transition-fast: 300ms;              /* Fast transition duration */
+}
+
+/* =========================
+   BASE STYLES
+   ========================= */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background); /* Full page background */
+    color: var(--color-foreground);            /* Default text */
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button {
+    border-radius: var(--radius);               /* Unified button shape */
+  }
+  
+}
+
+
+@layer components {
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border
+      bg-background focus:outline-none focus:ring-2 focus:ring-primary;
+    border-color: var(--color-border);
+  }
+}
+
+/* =========================
+   OPTIONAL UTILITIES
+   ========================= */
+@layer utilities {
+  .bg-surface {
+    background-color: var(--color-surface);     /* Section background */
+  }
+
+  .text-muted {
+    color: var(--color-muted-foreground);       /* Small/secondary text */
+  }
+
+  .border-theme {
+    border-color: var(--color-border);           /* Consistent borders */
+  }
+
+  .hover-lift {
+    transition-property: transform, box-shadow, border-color;
+    transition-duration: 300ms;
+    transition-timing-function: ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 20px 40px rgba(150, 72, 9, 0.1),
+      0 8px 16px rgba(158, 80, 8, 0.1);
+  }
+
+   .typing-loop {
+    overflow: hidden;
+    white-space: nowrap;
+    display: inline-block;
+    animation: typing-loop 3s steps(20, end) infinite;
+  }
+
+  @keyframes typing-loop {
+    0% {
+      width: 0;
+    }
+    40% {
+      width: 100%;
+    }
+    70% {
+      width: 100%;
+    }
+    100% {
+      width: 0;
+    }
+  }
+
+
+}

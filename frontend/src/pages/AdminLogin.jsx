@@ -1,32 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
+import { authApi } from "@/services/api";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Login failed");
-        return;
-      }
+      const data = await authApi.login({ username, password });
 
       // ✅ Save token
       localStorage.setItem("adminToken", data.token);
@@ -34,7 +24,9 @@ const AdminLogin = () => {
       // ✅ Redirect to admin dashboard
       navigate("/admin");
     } catch (err) {
-      setError("Server error", err.message);
+      setError(err.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,8 +58,8 @@ const AdminLogin = () => {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <Button type="submit" size="lg" className="w-full">
-            Login
+        <Button type="submit" size="lg" className="w-full" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
         </Button>
       </form>
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PriceRange } from "@/components/products/PriceRange";
 import { useCart } from "@/context/CartContext";
+import { productsApi } from "@/services/api";
 
 const PRODUCTS_PER_PAGE = 6;
 const MAX_CATEGORIES = 5;
@@ -22,9 +23,9 @@ const ProductsPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/products");
-        const data = await res.json();
-        setProducts(data);
+        const data = await productsApi.getAll();
+        // Handle both old format (array) and new format (object with products)
+        setProducts(data.products || data);
       } catch (err) {
         console.error("Failed to load products", err);
       } finally {
@@ -70,6 +71,11 @@ const ProductsPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, search, priceRange]);
+
+  /* ================= HANDLE ADD TO CART ================= */
+  const handleAddToCart = (product) => {
+    addToCart(product);
+  };
 
   return (
     <section className="bg-background overflow-hidden">
@@ -169,7 +175,15 @@ const ProductsPage = () => {
               </p>
 
               {loading ? (
-                <p>Loading products...</p>
+                <div className="flex items-center justify-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-muted-foreground text-lg">
+                    No products found matching your criteria.
+                  </p>
+                </div>
               ) : (
                 <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-10">
                   {paginatedProducts.map((product) => (
@@ -204,8 +218,13 @@ const ProductsPage = () => {
                         <span className="text-xl font-semibold">
                           ₹{product.price}
                         </span>
-                        <Button size="sm" variant="secondary" onClick={() => addToCart(product)}>
-                          +
+                        <Button 
+                          size="sm" 
+                          variant="secondary" 
+                          onClick={() => handleAddToCart(product)}
+                          disabled={product.stock === 0}
+                        >
+                          {product.stock === 0 ? "Out of Stock" : "+"}
                         </Button>
                       </div>
                     </div>

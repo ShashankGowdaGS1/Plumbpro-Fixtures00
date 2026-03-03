@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/Button";
 import { useNavigate } from "react-router-dom";
+import { salesApi } from "@/services/api";
 
 const OrderPage = () => {
   const { cart, removeFromCart, updateQuantity, clearCart } = useCart();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -14,17 +17,23 @@ const OrderPage = () => {
   const handlePlaceOrder = async () => {
     if (cart.length === 0) return;
 
+    setLoading(true);
     try {
-      await fetch("http://localhost:5000/api/sales", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart, total }),
-      });
+      // Create a sale for each cart item
+      for (const item of cart) {
+        await salesApi.create({
+          productId: item._id,
+          quantity: item.quantity,
+        });
+      }
 
       clearCart();
       navigate("/");
     } catch (err) {
       console.error("Order failed", err);
+      alert("Failed to place order. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -139,8 +148,9 @@ const OrderPage = () => {
             variant="primary"
             className="w-full"
             onClick={handlePlaceOrder}
+            disabled={loading}
           >
-            Place Order
+            {loading ? "Placing Order..." : "Place Order"}
           </Button>
         </div>
 

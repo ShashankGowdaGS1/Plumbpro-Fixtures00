@@ -1,15 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/Button";
-import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { productsApi } from "@/services/api";
 
 const AdminProducts = () => {
-  const navigate = useNavigate();
-
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -22,20 +22,22 @@ const AdminProducts = () => {
     image: null,
   });
 
-  const token = localStorage.getItem("adminToken");
-
   /* ================= FETCH PRODUCTS ================= */
   const fetchProducts = async () => {
-    const res = await fetch("http://localhost:5000/api/products");
-    const data = await res.json();
-    setProducts(data);
+    try {
+      const data = await productsApi.getAll();
+      // Handle both old format (array) and new format (object with products)
+      setProducts(data.products || data);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
-
-
 
   /* ================= INPUT CHANGE ================= */
   const handleChange = (e) => {
@@ -70,21 +72,20 @@ const AdminProducts = () => {
       if (form[key]) formData.append(key, form[key]);
     });
 
-    const url = editId
-      ? `http://localhost:5000/api/products/${editId}`
-      : "http://localhost:5000/api/products";
+    try {
+      if (editId) {
+        await productsApi.update(editId, formData);
+      } else {
+        await productsApi.create(formData);
+      }
 
-    const method = editId ? "PUT" : "POST";
-
-    await fetch(url, {
-      method,
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    resetForm();
-    setShowForm(false);
-    fetchProducts();
+      resetForm();
+      setShowForm(false);
+      fetchProducts();
+    } catch (error) {
+      console.error("Failed to save product:", error);
+      alert(error.message || "Failed to save product");
+    }
   };
 
   /* ================= EDIT ================= */
@@ -105,14 +106,18 @@ const AdminProducts = () => {
 
   /* ================= DELETE ================= */
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this product?")) return;
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
 
-    await fetch(`http://localhost:5000/api/products/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    fetchProducts();
+    setDeletingId(id);
+    try {
+      await productsApi.delete(id);
+      fetchProducts();
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      alert(error.message || "Failed to delete product");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -128,7 +133,6 @@ const AdminProducts = () => {
               Add Product
             </Button>
           )}
-
         </div>
       </div>
 
@@ -220,50 +224,87 @@ const AdminProducts = () => {
       {/* ================= TABLE ================= */}
       {!showForm && (
         <div className="bg-card border border-theme rounded-xl overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-6 py-4">Image</th>
-                <th className="px-6 py-4">Title</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Price</th>
-                <th className="px-6 py-4">Stock</th>
-                <th className="px-6 py-4 text-center">Actions</th>
-              </tr>
-            </thead>
+          {loading ? (
+            <div className="p-8 text-center">Loading products...</div>
+          ) : products.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground mb-4">No products found</p>
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Your First Product
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-6 py-4">Image</th>
+                    <th className="px-6 py-4">Title</th>
+                    <th className="px-6 py-4">Category</th>
+                    <th className="px-6 py-4">Price</th>
+                    <th className="px-6 py-4">Stock</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {products.map((p) => (
-                <tr key={p._id} className="border-t border-theme">
-                  <td className="px-6 py-4">
-                    {p.image && (
-                      <img
-                        src={p.image}
-                        alt={p.title}
-                        className="w-14 h-14 object-cover rounded-lg"
-                      />
-                    )}
-                  </td>
-                  <td className="px-6 py-4">{p.title}</td>
-                  <td className="px-6 py-4">{p.category}</td>
-                  <td className="px-6 py-4">${p.price}</td>
-                  <td className="px-6 py-4">{p.stock}</td>
-                  <td className="px-6 py-4 flex justify-center gap-3">
-                    <Button size="sm" onClick={() => handleEdit(p)}>
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(p._id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                <tbody>
+                  {products.map((p) => (
+                    <tr key={p._id} className="border-t border-theme">
+                      <td className="px-6 py-4">
+                        {p.image ? (
+                          <img
+                            src={p.image}
+                            alt={p.title}
+                            className="w-14 h-14 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-xs">
+                            No IMG
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 font-medium">{p.title}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 bg-secondary rounded-full text-xs">
+                          {p.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">₹{p.price}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          p.stock < 10 
+                            ? "bg-red-100 text-red-800" 
+                            : "bg-green-100 text-green-800"
+                        }`}>
+                          {p.stock} in stock
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleEdit(p)}
+                            disabled={deletingId === p._id}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDelete(p._id)}
+                            disabled={deletingId === p._id}
+                          >
+                            {deletingId === p._id ? "Deleting..." : "Delete"}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

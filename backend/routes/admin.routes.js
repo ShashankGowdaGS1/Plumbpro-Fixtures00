@@ -8,8 +8,20 @@ const router = express.Router();
 /* ================= ADMIN STATS ================= */
 router.get("/stats", protectAdmin, async (req, res) => {
   try {
-    const totalProducts = await Product.countDocuments();
-    const totalOrders = await Sale.countDocuments();
+    const [
+      totalProducts,
+      totalOrders,
+      lowStockProducts,
+      recentSales
+    ] = await Promise.all([
+      Product.countDocuments(),
+      Sale.countDocuments(),
+      Product.find({ stock: { $lt: 10 } }).limit(5).select("title stock"),
+      Sale.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("product", "title")
+    ]);
 
     const revenueData = await Sale.aggregate([
       {
@@ -27,6 +39,8 @@ router.get("/stats", protectAdmin, async (req, res) => {
       totalProducts,
       totalOrders,
       totalRevenue,
+      lowStockProducts,
+      recentSales,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
